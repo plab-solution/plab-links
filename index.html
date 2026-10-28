@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PLAB Links</title>
+<meta name="robots" content="noindex" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+  :root {
+    --bg: #0e1530;
+    --panel: rgba(255,255,255,.07);
+    --panel-line: rgba(255,255,255,.14);
+    --text: #ffffff;
+    --muted: rgba(255,255,255,.82);
+    --focus: #ffd666;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    min-height: 100vh; color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    /* 배경 채도·밝기를 낮춰 글자 대비 확보 */
+    background:
+      radial-gradient(1000px 520px at 12% 0%, rgba(98, 70, 200, .38), transparent 65%),
+      radial-gradient(800px 480px at 92% 100%, rgba(15, 140, 130, .30), transparent 65%),
+      var(--bg);
+    background-attachment: fixed;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 16px 150px;
+  }
+  a { color: inherit; text-decoration: none; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 14px; }
+
+  .clock { font-size: 64px; font-weight: 600; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .date { margin-top: 10px; color: var(--muted); font-size: 17px; font-weight: 500; }
+
+  /* 검색창: 불투명한 흰 바탕 + 진한 글자 */
+  .search {
+    margin: 30px 0 36px; width: min(540px, 100%); height: 54px; border-radius: 27px;
+    background: #ffffff; color: #1b1f2e;
+    display: flex; align-items: center; gap: 10px; padding: 0 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .search input { flex: 1; border: 0; outline: 0; background: transparent; color: #1b1f2e; font: inherit; font-size: 16px; }
+  .search input::placeholder { color: #6b7185; }
+
+  /* 사이트 영역: 반투명 패널로 배경과 분리 */
+  .panel {
+    width: min(820px, 100%); padding: 26px 24px 30px; border-radius: 28px;
+    background: var(--panel); border: 1px solid var(--panel-line);
+  }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  .panel-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 26px 12px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 6px; border-radius: 18px; }
+  .tile {
+    position: relative; width: 92px; height: 92px; border-radius: 26px;
+    display: grid; place-items: center; font-size: 42px;
+    border: 2px solid rgba(255,255,255,.55);
+    box-shadow: 0 12px 26px rgba(0,0,0,.35);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  a.app:hover .tile { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(0,0,0,.45); }
+  a.app:hover .name { text-decoration: underline; text-underline-offset: 4px; }
+  .name { font-size: 16px; font-weight: 700; line-height: 1.3; }
+
+  /* 열람 범위: 흐린 글씨 대신 색 배지 */
+  .scope { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #10131f; }
+  .s-public { background: #7ce6b8; }
+  .s-all    { background: #9cc4ff; }
+  .s-team   { background: #d4b8ff; }
+
+  /* 준비 중: 투명도 대신 흑백 처리 + 명확한 라벨 */
+  .app.soon .tile { filter: grayscale(1) brightness(.75); border-style: dashed; box-shadow: none; }
+  .app.soon .name { color: var(--muted); }
+  .ribbon {
+    position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%);
+    font-size: 11.5px; font-weight: 800; white-space: nowrap;
+    padding: 3px 9px; border-radius: 999px; background: #ffd666; color: #2a2100;
+  }
+
+  /* 도크: 아이콘 아래에 이름 항상 표시 */
+  .dock {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 10px 12px; border-radius: 24px;
+    max-width: calc(100% - 32px); overflow-x: auto;
+    background: rgba(14, 21, 48, .88); border: 1px solid var(--panel-line);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 12px 30px rgba(0,0,0,.4);
+  }
+  .dock a {
+    flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    padding: 6px 2px; border-radius: 14px; transition: background .15s;
+  }
+  .dock a:hover { background: rgba(255,255,255,.12); }
+  .dock .di {
+    width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 23px;
+    background: #ffffff;
+  }
+  .dock .dl { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+  .empty { display: none; text-align: center; color: var(--muted); font-size: 15px; margin: 8px 0 0; }
+
+  @media (max-width: 560px) {
+    body { padding-top: 32px; }
+    .clock { font-size: 52px; }
+    .panel { padding: 20px 12px 24px; border-radius: 22px; }
+    .apps { grid-template-columns: repeat(3, 1fr); gap: 22px 4px; }
+    .tile { width: 74px; height: 74px; border-radius: 22px; font-size: 34px; }
+    .name { font-size: 14px; }
+    .scope { font-size: 11.5px; padding: 2px 8px; }
+    .dock a { width: 62px; }
+    .dock .di { width: 40px; height: 40px; font-size: 20px; }
+    .dock .dl { font-size: 11px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+  <div class="clock" id="clock">--:--</div>
+  <div class="date" id="date"></div>
+
+  <label class="search">
+    <span aria-hidden="true">🔍</span>
+    <input id="q" type="search" placeholder="PLAB 사이트 검색 (예: 주간, 거래처)" autocomplete="off" />
+  </label>
+
+  <section class="panel" aria-labelledby="sitesTitle">
+    <div class="panel-head">
+      <h2 id="sitesTitle">PLAB 사이트</h2>
+      <div class="legend" aria-label="열람 범위 안내">
+        <span><i style="background:#7ce6b8"></i>외부 공개</span>
+        <span><i style="background:#9cc4ff"></i>전 직원</span>
+        <span><i style="background:#d4b8ff"></i>일부 팀</span>
+      </div>
+    </div>
+    <div class="apps" id="apps"></div>
+    <p class="empty" id="empty">검색 결과가 없어요.</p>
+  </section>
+
+  <nav class="dock" id="dock" aria-label="자주 쓰는 도구"></nav>
+
+<script>
+/* access: "public" | "all-staff" | "team",  status: "live" | "soon" */
+const SITES = [
+  { name: "회사 소개", url: "https://plab.life", icon: "🏢", color: "linear-gradient(135deg,#34d399,#047857)", access: "public", status: "live", tags: "홈 회사소개" },
+  { name: "주간업무보고", url: "https://weekly.plab.life", icon: "🗓️", color: "linear-gradient(135deg,#60a5fa,#1d4ed8)", access: "all-staff", status: "live", tags: "주간 일일 업무" },
+  { name: "거래처 관리", url: "https://brand.plab.life", icon: "🤝", color: "linear-gradient(135deg,#c084fc,#6d28d9)", access: "team", status: "live", tags: "브랜드 계약 입금" },
+  { name: "멘토링 트래커", url: "#", icon: "📊", color: "linear-gradient(135deg,#fbbf24,#b45309)", access: "team", status: "soon", tags: "멘토링 소상공인" },
+  { name: "운영 대시보드", url: "#", icon: "📈", color: "linear-gradient(135deg,#f472b6,#be185d)", access: "team", status: "soon", tags: "운영 회계 계약" },
+];
+const DOCK = [
+  { name: "Gmail", url: "https://mail.google.com/a/plabsolution.com", icon: "✉️" },
+  { name: "드라이브", url: "https://drive.google.com/drive/shared-drives", icon: "📁" },
+  { name: "캘린더", url: "https://calendar.google.com", icon: "📅" },
+  { name: "Slack", url: "https://app.slack.com", icon: "💬" },
+  { name: "클로브", url: "https://clobe.ai", icon: "🧾" },
+  { name: "홈페이지", url: "https://www.plabsolution.com", icon: "🌐" },
+];
+
+const ACCESS = {
+  "public":    { label: "외부 공개", cls: "s-public" },
+  "all-staff": { label: "전 직원",   cls: "s-all" },
+  "team":      { label: "일부 팀",   cls: "s-team" },
+};
+
+const $ = (s) => document.querySelector(s);
+
+$("#apps").innerHTML = SITES.map((s, i) => {
+  const soon = s.status === "soon";
+  const a = ACCESS[s.access];
+  const tag = soon ? "div" : "a";
+  const attrs = soon
+    ? `aria-label="${s.name} (준비 중)"`
+    : `href="${s.url}" target="_blank" rel="noopener" aria-label="${s.name} 열기 (${a.label})"`;
+  return `<${tag} class="app ${soon ? "soon" : ""}" ${attrs} data-i="${i}">
+    <div class="tile" style="background:${s.color}">${s.icon}${soon ? '<span class="ribbon">준비 중</span>' : ""}</div>
+    <div class="name">${s.name}</div>
+    <span class="scope ${a.cls}">${a.label}</span>
+  </${tag}>`;
+}).join("");
+
+$("#dock").innerHTML = DOCK.map(d =>
+  `<a href="${d.url}" target="_blank" rel="noopener"><span class="di">${d.icon}</span><span class="dl">${d.name}</span></a>`
+).join("");
+
+$("#q").addEventListener("input", () => {
+  const t = $("#q").value.trim().toLowerCase(); let n = 0;
+  document.querySelectorAll(".app").forEach(el => {
+    const s = SITES[el.dataset.i];
+    const ok = !t || (s.name + s.tags + s.url).toLowerCase().includes(t);
+    el.style.display = ok ? "" : "none"; if (ok) n++;
+  });
+  $("#empty").style.display = n ? "none" : "block";
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); }
+});
+
+function tick() {
+  const d = new Date();
+  $("#clock").textContent = d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  $("#date").textContent = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
+}
+tick(); setInterval(tick, 15000);
+</script>
+</body>
+</html>
