@@ -14,6 +14,8 @@
     --text: #ffffff;
     --muted: rgba(255,255,255,.82);
     --focus: #ffd666;
+    --ink: #1b1f2e;
+    --ink-muted: #5d6478;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; }
@@ -21,7 +23,6 @@
     min-height: 100vh; color: var(--text);
     font-family: "Pretendard Variable", Pretendard, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-    /* 배경 채도·밝기를 낮춰 글자 대비 확보 */
     background:
       radial-gradient(1000px 520px at 12% 0%, rgba(98, 70, 200, .38), transparent 65%),
       radial-gradient(800px 480px at 92% 100%, rgba(15, 140, 130, .30), transparent 65%),
@@ -31,22 +32,30 @@
     padding: 48px 16px 150px;
   }
   a { color: inherit; text-decoration: none; }
+  button { font: inherit; }
   :focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: 14px; }
+
+  /* 편집 버튼 */
+  .edit-toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 5;
+    height: 38px; padding: 0 14px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #fff; border: 1px solid var(--panel-line);
+    font-size: 14px; font-weight: 600;
+  }
+  body.editing .edit-toggle { background: var(--focus); color: #2a2100; border-color: var(--focus); }
 
   .clock { font-size: 64px; font-weight: 600; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
   .date { margin-top: 10px; color: var(--muted); font-size: 17px; font-weight: 500; }
 
-  /* 검색창: 불투명한 흰 바탕 + 진한 글자 */
   .search {
     margin: 30px 0 36px; width: min(540px, 100%); height: 54px; border-radius: 27px;
-    background: #ffffff; color: #1b1f2e;
+    background: #ffffff; color: var(--ink);
     display: flex; align-items: center; gap: 10px; padding: 0 22px;
     box-shadow: 0 10px 30px rgba(0,0,0,.35);
   }
-  .search input { flex: 1; border: 0; outline: 0; background: transparent; color: #1b1f2e; font: inherit; font-size: 16px; }
+  .search input { flex: 1; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; }
   .search input::placeholder { color: #6b7185; }
 
-  /* 사이트 영역: 반투명 패널로 배경과 분리 */
   .panel {
     width: min(820px, 100%); padding: 26px 24px 30px; border-radius: 28px;
     background: var(--panel); border: 1px solid var(--panel-line);
@@ -57,8 +66,15 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
+  .edit-hint { display: none; margin: -8px 0 18px; padding: 10px 14px; border-radius: 12px; background: rgba(255,214,102,.14); color: #ffe7a3; font-size: 14px; }
+  body.editing .edit-hint { display: block; }
+
   .apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 26px 12px; }
-  .app { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 6px; border-radius: 18px; }
+  .app {
+    display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+    padding: 6px; border-radius: 18px; background: none; border: 0; color: inherit; cursor: pointer;
+  }
+  div.app { cursor: default; }
   .tile {
     position: relative; width: 92px; height: 92px; border-radius: 26px;
     display: grid; place-items: center; font-size: 42px;
@@ -66,17 +82,15 @@
     box-shadow: 0 12px 26px rgba(0,0,0,.35);
     transition: transform .18s ease, box-shadow .18s ease;
   }
-  a.app:hover .tile { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(0,0,0,.45); }
+  a.app:hover .tile, button.app:hover .tile { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(0,0,0,.45); }
   a.app:hover .name { text-decoration: underline; text-underline-offset: 4px; }
-  .name { font-size: 16px; font-weight: 700; line-height: 1.3; }
+  .name { font-size: 16px; font-weight: 700; line-height: 1.3; word-break: keep-all; }
 
-  /* 열람 범위: 흐린 글씨 대신 색 배지 */
   .scope { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #10131f; }
   .s-public { background: #7ce6b8; }
-  .s-all    { background: #9cc4ff; }
-  .s-team   { background: #d4b8ff; }
+  .s-all-staff { background: #9cc4ff; }
+  .s-team { background: #d4b8ff; }
 
-  /* 준비 중: 투명도 대신 흑백 처리 + 명확한 라벨 */
   .app.soon .tile { filter: grayscale(1) brightness(.75); border-style: dashed; box-shadow: none; }
   .app.soon .name { color: var(--muted); }
   .ribbon {
@@ -85,7 +99,21 @@
     padding: 3px 9px; border-radius: 999px; background: #ffd666; color: #2a2100;
   }
 
-  /* 도크: 아이콘 아래에 이름 항상 표시 */
+  /* 편집 모드 표시 */
+  .pen {
+    display: none; position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; border-radius: 50%;
+    background: #fff; color: var(--ink); font-size: 14px; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  body.editing .pen { display: grid; }
+  body.editing .app .tile { animation: wiggle .9s ease-in-out infinite; }
+  body.editing .app:nth-child(2n) .tile { animation-delay: -.45s; }
+  @keyframes wiggle { 0%,100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+
+  .add-tile { display: none; }
+  body.editing .add-tile { display: flex; }
+  .add-tile .tile { background: transparent; border: 2px dashed rgba(255,255,255,.6); box-shadow: none; font-size: 36px; animation: none !important; }
+
+  /* 도크 */
   .dock {
     position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
     display: flex; gap: 6px; padding: 10px 12px; border-radius: 24px;
@@ -94,35 +122,83 @@
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     box-shadow: 0 12px 30px rgba(0,0,0,.4);
   }
-  .dock a {
-    flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  .dock .d {
+    position: relative; flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 5px;
     padding: 6px 2px; border-radius: 14px; transition: background .15s;
+    background: none; border: 0; color: inherit; cursor: pointer;
   }
-  .dock a:hover { background: rgba(255,255,255,.12); }
+  .dock .d:hover { background: rgba(255,255,255,.12); }
   .dock .di {
     width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 23px;
-    background: #ffffff;
+    background: #ffffff; color: var(--ink);
   }
   .dock .dl { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .dock .pen { top: -2px; right: 8px; width: 22px; height: 22px; font-size: 11px; }
+  .dock .add-tile { display: none; }
+  body.editing .dock .add-tile { display: flex; }
+  .dock .add-tile .di { background: transparent; border: 2px dashed rgba(255,255,255,.6); color: #fff; }
 
   .empty { display: none; text-align: center; color: var(--muted); font-size: 15px; margin: 8px 0 0; }
 
+  /* 편집 창 */
+  dialog {
+    width: min(460px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow: auto;
+    border: 0; border-radius: 22px; padding: 24px; color: var(--ink); background: #fff;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  dialog::backdrop { background: rgba(8, 12, 28, .6); backdrop-filter: blur(4px); }
+  dialog h3 { margin: 0 0 18px; font-size: 19px; letter-spacing: -.02em; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .field label, .field .lbl { font-size: 13px; font-weight: 700; color: var(--ink-muted); }
+  .field input, .field select {
+    height: 44px; border: 1px solid #d5d9e3; border-radius: 11px; padding: 0 12px; font: inherit; font-size: 15px; color: var(--ink); background: #fff;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid #4f6bff; outline-offset: 0; border-color: transparent; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 12.5px; color: var(--ink-muted); }
+  .colors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .colors input { position: absolute; opacity: 0; pointer-events: none; }
+  .colors label span {
+    display: block; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; border: 3px solid transparent;
+  }
+  .colors input:checked + span { border-color: var(--ink); }
+  .colors input:focus-visible + span { outline: 3px solid #4f6bff; outline-offset: 2px; }
+  .site-only.hidden { display: none; }
+  .actions { display: flex; gap: 8px; margin-top: 22px; }
+  .actions .spacer { flex: 1; }
+  .btn { height: 44px; padding: 0 18px; border-radius: 11px; border: 1px solid #d5d9e3; background: #fff; color: var(--ink); font-weight: 700; cursor: pointer; }
+  .btn.primary { background: #1d2b64; color: #fff; border-color: #1d2b64; }
+  .btn.danger { color: #c62828; border-color: #f1c4c4; }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .err { color: #c62828; font-size: 13.5px; margin: 6px 0 0; min-height: 1em; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%) translateY(20px);
+    background: #fff; color: var(--ink); padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: .2s; z-index: 10; max-width: calc(100% - 32px);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
   @media (max-width: 560px) {
-    body { padding-top: 32px; }
+    body { padding-top: 64px; }
     .clock { font-size: 52px; }
     .panel { padding: 20px 12px 24px; border-radius: 22px; }
     .apps { grid-template-columns: repeat(3, 1fr); gap: 22px 4px; }
     .tile { width: 74px; height: 74px; border-radius: 22px; font-size: 34px; }
     .name { font-size: 14px; }
     .scope { font-size: 11.5px; padding: 2px 8px; }
-    .dock a { width: 62px; }
+    .dock .d { width: 62px; }
     .dock .di { width: 40px; height: 40px; font-size: 20px; }
     .dock .dl { font-size: 11px; }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
 </style>
 </head>
 <body>
+  <button class="edit-toggle" id="editToggle" type="button">✎ 편집</button>
+
   <div class="clock" id="clock">--:--</div>
   <div class="date" id="date"></div>
 
@@ -140,67 +216,354 @@
         <span><i style="background:#d4b8ff"></i>일부 팀</span>
       </div>
     </div>
+    <p class="edit-hint">편집 중이에요. 아이콘을 누르면 수정하고, + 를 누르면 새 링크를 추가해요.</p>
     <div class="apps" id="apps"></div>
     <p class="empty" id="empty">검색 결과가 없어요.</p>
   </section>
 
   <nav class="dock" id="dock" aria-label="자주 쓰는 도구"></nav>
 
+  <!-- 비밀번호 입력 -->
+  <dialog id="loginDlg">
+    <form id="loginForm" method="dialog">
+      <h3>편집 비밀번호</h3>
+      <div class="field">
+        <label for="keyInput">관리자에게 받은 비밀번호를 입력하세요</label>
+        <input id="keyInput" type="password" autocomplete="current-password" required />
+        <p class="err" id="loginErr"></p>
+      </div>
+      <div class="actions">
+        <span class="spacer"></span>
+        <button class="btn" type="button" data-close>취소</button>
+        <button class="btn primary" type="submit" id="loginBtn">확인</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 링크 추가/수정 -->
+  <dialog id="editDlg">
+    <form id="editForm" method="dialog" novalidate>
+      <h3 id="editTitle">링크 추가</h3>
+      <div class="row2">
+        <div class="field">
+          <label for="fSection">위치</label>
+          <select id="fSection">
+            <option value="site">사이트 (가운데)</option>
+            <option value="dock">도구 (하단 도크)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fIcon">아이콘</label>
+          <input id="fIcon" maxlength="8" placeholder="🔗" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="fName">이름</label>
+        <input id="fName" maxlength="30" required placeholder="예: 주간업무보고" />
+      </div>
+      <div class="field">
+        <label for="fUrl">주소</label>
+        <input id="fUrl" inputmode="url" placeholder="https://" />
+        <span class="hint">준비 중인 사이트는 비워 두거나 # 을 넣으세요.</span>
+      </div>
+      <div class="field site-only">
+        <span class="lbl">색상</span>
+        <div class="colors" id="fColors"></div>
+      </div>
+      <div class="row2 site-only">
+        <div class="field">
+          <label for="fAccess">열람 범위</label>
+          <select id="fAccess">
+            <option value="public">외부 공개</option>
+            <option value="all-staff">전 직원</option>
+            <option value="team">일부 팀</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fStatus">상태</label>
+          <select id="fStatus">
+            <option value="live">운영 중</option>
+            <option value="soon">준비 중</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="fTags">검색어 (선택)</label>
+          <input id="fTags" maxlength="100" placeholder="띄어쓰기로 구분" />
+        </div>
+        <div class="field">
+          <label for="fOrder">순서</label>
+          <input id="fOrder" type="number" min="0" max="9999" step="1" />
+        </div>
+      </div>
+      <p class="err" id="editErr"></p>
+      <div class="actions">
+        <button class="btn danger" type="button" id="deleteBtn">삭제</button>
+        <span class="spacer"></span>
+        <button class="btn" type="button" data-close>취소</button>
+        <button class="btn primary" type="submit" id="saveBtn">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
-/* access: "public" | "all-staff" | "team",  status: "live" | "soon" */
-const SITES = [
-  { name: "회사 소개", url: "https://plab.life", icon: "🏢", color: "linear-gradient(135deg,#34d399,#047857)", access: "public", status: "live", tags: "홈 회사소개" },
-  { name: "주간업무보고", url: "https://weekly.plab.life", icon: "🗓️", color: "linear-gradient(135deg,#60a5fa,#1d4ed8)", access: "all-staff", status: "live", tags: "주간 일일 업무" },
-  { name: "거래처 관리", url: "https://brand.plab.life", icon: "🤝", color: "linear-gradient(135deg,#c084fc,#6d28d9)", access: "team", status: "live", tags: "브랜드 계약 입금" },
-  { name: "멘토링 트래커", url: "#", icon: "📊", color: "linear-gradient(135deg,#fbbf24,#b45309)", access: "team", status: "soon", tags: "멘토링 소상공인" },
-  { name: "운영 대시보드", url: "#", icon: "📈", color: "linear-gradient(135deg,#f472b6,#be185d)", access: "team", status: "soon", tags: "운영 회계 계약" },
-];
-const DOCK = [
-  { name: "Gmail", url: "https://mail.google.com/a/plabsolution.com", icon: "✉️" },
-  { name: "드라이브", url: "https://drive.google.com/drive/shared-drives", icon: "📁" },
-  { name: "캘린더", url: "https://calendar.google.com", icon: "📅" },
-  { name: "Slack", url: "https://app.slack.com", icon: "💬" },
-  { name: "클로브", url: "https://clobe.ai", icon: "🧾" },
-  { name: "홈페이지", url: "https://www.plabsolution.com", icon: "🌐" },
+/* ===== 설정: Apps Script 웹 앱 URL(…/exec)을 붙여넣으세요 ===== */
+const API_URL = "https://script.google.com/macros/s/AKfycbx_COAarxzikZn71R9fM6uoIiweVnhh7L4pxwJeaDpCtWAE0pHtvKvcs56D9be2RtL3/exec";
+/* ============================================================== */
+
+/* API에 연결되지 않았거나 실패했을 때 보여줄 기본 목록 */
+const DEFAULT_ITEMS = [
+  { id: "d1", section: "site", name: "회사 소개", url: "https://plab.life", icon: "🏢", color: "green", access: "public", status: "live", tags: "홈 회사소개", order: 10 },
+  { id: "d2", section: "site", name: "주간업무보고", url: "https://weekly.plab.life", icon: "🗓️", color: "blue", access: "all-staff", status: "live", tags: "주간 일일 업무", order: 20 },
+  { id: "d3", section: "site", name: "거래처 관리", url: "https://brand.plab.life", icon: "🤝", color: "purple", access: "team", status: "live", tags: "브랜드 계약 입금", order: 30 },
+  { id: "d4", section: "site", name: "멘토링 트래커", url: "#", icon: "📊", color: "amber", access: "team", status: "soon", tags: "멘토링 소상공인", order: 40 },
+  { id: "d5", section: "site", name: "운영 대시보드", url: "#", icon: "📈", color: "pink", access: "team", status: "soon", tags: "운영 회계 계약", order: 50 },
+  { id: "d6", section: "dock", name: "Gmail", url: "https://mail.google.com/a/plabsolution.com", icon: "✉️", status: "live", order: 10 },
+  { id: "d7", section: "dock", name: "드라이브", url: "https://drive.google.com/drive/shared-drives", icon: "📁", status: "live", order: 20 },
+  { id: "d8", section: "dock", name: "캘린더", url: "https://calendar.google.com", icon: "📅", status: "live", order: 30 },
+  { id: "d9", section: "dock", name: "Slack", url: "https://app.slack.com", icon: "💬", status: "live", order: 40 },
+  { id: "d10", section: "dock", name: "클로브", url: "https://clobe.ai", icon: "🧾", status: "live", order: 50 },
+  { id: "d11", section: "dock", name: "홈페이지", url: "https://www.plabsolution.com", icon: "🌐", status: "live", order: 60 },
 ];
 
-const ACCESS = {
-  "public":    { label: "외부 공개", cls: "s-public" },
-  "all-staff": { label: "전 직원",   cls: "s-all" },
-  "team":      { label: "일부 팀",   cls: "s-team" },
+const COLORS = {
+  green:  "linear-gradient(135deg,#34d399,#047857)",
+  blue:   "linear-gradient(135deg,#60a5fa,#1d4ed8)",
+  purple: "linear-gradient(135deg,#c084fc,#6d28d9)",
+  amber:  "linear-gradient(135deg,#fbbf24,#b45309)",
+  pink:   "linear-gradient(135deg,#f472b6,#be185d)",
+  teal:   "linear-gradient(135deg,#2dd4bf,#0f766e)",
+  red:    "linear-gradient(135deg,#fb7185,#be123c)",
+  slate:  "linear-gradient(135deg,#94a3b8,#334155)",
 };
+const ACCESS = { "public": "외부 공개", "all-staff": "전 직원", "team": "일부 팀" };
 
 const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const safeUrl = (u) => /^https?:\/\//i.test(u || "") ? u : "#";
+const store = {
+  get(k, area = localStorage) { try { return area.getItem(k); } catch { return null; } },
+  set(k, v, area = localStorage) { try { area.setItem(k, v); } catch {} },
+  del(k, area = localStorage) { try { area.removeItem(k); } catch {} },
+};
 
-$("#apps").innerHTML = SITES.map((s, i) => {
-  const soon = s.status === "soon";
-  const a = ACCESS[s.access];
-  const tag = soon ? "div" : "a";
-  const attrs = soon
-    ? `aria-label="${s.name} (준비 중)"`
-    : `href="${s.url}" target="_blank" rel="noopener" aria-label="${s.name} 열기 (${a.label})"`;
-  return `<${tag} class="app ${soon ? "soon" : ""}" ${attrs} data-i="${i}">
-    <div class="tile" style="background:${s.color}">${s.icon}${soon ? '<span class="ribbon">준비 중</span>' : ""}</div>
-    <div class="name">${s.name}</div>
-    <span class="scope ${a.cls}">${a.label}</span>
-  </${tag}>`;
-}).join("");
+let items = DEFAULT_ITEMS;
+let editing = false;
+let editKey = store.get("plab-links-key", sessionStorage) || "";
+let current = null; // 수정 중인 항목
 
-$("#dock").innerHTML = DOCK.map(d =>
-  `<a href="${d.url}" target="_blank" rel="noopener"><span class="di">${d.icon}</span><span class="dl">${d.name}</span></a>`
-).join("");
+/* ---------- 화면 그리기 ---------- */
+function render() {
+  const sorted = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+  const sites = sorted.filter(i => i.section === "site");
+  const tools = sorted.filter(i => i.section === "dock");
 
-$("#q").addEventListener("input", () => {
+  $("#apps").innerHTML = sites.map(s => {
+    const soon = s.status === "soon";
+    const scope = ACCESS[s.access] || "전 직원";
+    const inner = `
+      <div class="tile" style="background:${COLORS[s.color] || COLORS.slate}">${esc(s.icon || "🔗")}
+        ${soon ? '<span class="ribbon">준비 중</span>' : ""}<span class="pen" aria-hidden="true">✎</span></div>
+      <div class="name">${esc(s.name)}</div>
+      <span class="scope s-${esc(s.access || "all-staff")}">${scope}</span>`;
+    if (editing) return `<button type="button" class="app ${soon ? "soon" : ""}" data-id="${esc(s.id)}" aria-label="${esc(s.name)} 수정">${inner}</button>`;
+    if (soon) return `<div class="app soon" data-id="${esc(s.id)}" aria-label="${esc(s.name)} (준비 중)">${inner}</div>`;
+    return `<a class="app" data-id="${esc(s.id)}" href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener" aria-label="${esc(s.name)} 열기 (${scope})">${inner}</a>`;
+  }).join("") + `
+    <button type="button" class="app add-tile" data-add="site" aria-label="사이트 추가">
+      <div class="tile">＋</div><div class="name">사이트 추가</div>
+    </button>`;
+
+  $("#dock").innerHTML = tools.map(d => {
+    const inner = `<span class="di">${esc(d.icon || "🔗")}</span><span class="dl">${esc(d.name)}</span><span class="pen" aria-hidden="true">✎</span>`;
+    return editing
+      ? `<button type="button" class="d" data-id="${esc(d.id)}" aria-label="${esc(d.name)} 수정">${inner}</button>`
+      : `<a class="d" data-id="${esc(d.id)}" href="${esc(safeUrl(d.url))}" target="_blank" rel="noopener">${inner}</a>`;
+  }).join("") + `
+    <button type="button" class="d add-tile" data-add="dock" aria-label="도구 추가"><span class="di">＋</span><span class="dl">추가</span></button>`;
+
+  filter();
+}
+
+function filter() {
   const t = $("#q").value.trim().toLowerCase(); let n = 0;
-  document.querySelectorAll(".app").forEach(el => {
-    const s = SITES[el.dataset.i];
-    const ok = !t || (s.name + s.tags + s.url).toLowerCase().includes(t);
+  document.querySelectorAll("#apps .app[data-id]").forEach(el => {
+    const s = items.find(i => i.id === el.dataset.id); if (!s) return;
+    const ok = !t || (s.name + " " + (s.tags || "") + " " + s.url).toLowerCase().includes(t);
     el.style.display = ok ? "" : "none"; if (ok) n++;
   });
-  $("#empty").style.display = n ? "none" : "block";
+  $("#empty").style.display = n || editing ? "none" : "block";
+}
+
+/* ---------- 데이터 ---------- */
+async function api(body) {
+  const res = body
+    ? await fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) })
+    : await fetch(API_URL + "?t=" + Date.now());
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+async function load() {
+  const cached = store.get("plab-links-cache");
+  if (cached) { try { items = JSON.parse(cached); } catch {} }
+  render();
+  if (!API_URL) return;
+  try {
+    const r = await api();
+    if (r.ok && Array.isArray(r.items) && r.items.length) {
+      items = r.items;
+      store.set("plab-links-cache", JSON.stringify(items));
+      render();
+    }
+  } catch {
+    toast("최신 목록을 불러오지 못했어요. 저장된 목록을 보여드려요.");
+  }
+}
+
+/* ---------- 편집 모드 ---------- */
+$("#editToggle").addEventListener("click", () => {
+  if (editing) return setEditing(false);
+  if (!API_URL) return toast("API 주소를 연결하면 편집할 수 있어요.");
+  if (editKey) return setEditing(true);
+  $("#keyInput").value = ""; $("#loginErr").textContent = "";
+  $("#loginDlg").showModal();
 });
+
+function setEditing(on) {
+  editing = on;
+  document.body.classList.toggle("editing", on);
+  $("#editToggle").textContent = on ? "✓ 완료" : "✎ 편집";
+  render();
+}
+
+$("#loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = $("#keyInput").value.trim(); if (!key) return;
+  $("#loginBtn").disabled = true; $("#loginErr").textContent = "";
+  try {
+    const r = await api({ action: "verify", key });
+    if (!r.ok) { $("#loginErr").textContent = "비밀번호가 맞지 않아요."; return; }
+    editKey = key; store.set("plab-links-key", key, sessionStorage);
+    $("#loginDlg").close(); setEditing(true);
+  } catch {
+    $("#loginErr").textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.";
+  } finally { $("#loginBtn").disabled = false; }
+});
+
+/* 편집 중 클릭 → 수정 창 */
+function onItemClick(e) {
+  if (!editing) return;
+  const add = e.target.closest("[data-add]");
+  const el = e.target.closest("[data-id]");
+  if (add) { e.preventDefault(); openEditor(null, add.dataset.add); }
+  else if (el) { e.preventDefault(); openEditor(items.find(i => i.id === el.dataset.id)); }
+}
+$("#apps").addEventListener("click", onItemClick);
+$("#dock").addEventListener("click", onItemClick);
+
+$("#fColors").innerHTML = Object.entries(COLORS).map(([k, g]) =>
+  `<label title="${k}"><input type="radio" name="color" value="${k}"><span style="background:${g}"></span></label>`).join("");
+
+function openEditor(item, section) {
+  current = item || null;
+  const it = item || { section, icon: "", color: "blue", access: "all-staff", status: "live", tags: "",
+    order: nextOrder(section) };
+  $("#editTitle").textContent = item ? "링크 수정" : (section === "dock" ? "도구 추가" : "사이트 추가");
+  $("#fSection").value = it.section || "site";
+  $("#fName").value = it.name || "";
+  $("#fUrl").value = it.url && it.url !== "#" ? it.url : "";
+  $("#fIcon").value = it.icon || "";
+  $("#fAccess").value = it.access || "all-staff";
+  $("#fStatus").value = it.status || "live";
+  $("#fTags").value = it.tags || "";
+  $("#fOrder").value = it.order ?? 0;
+  const c = document.querySelector(`#fColors input[value="${it.color || "blue"}"]`) || document.querySelector("#fColors input");
+  c.checked = true;
+  $("#deleteBtn").style.display = item ? "" : "none";
+  $("#editErr").textContent = "";
+  toggleSiteFields();
+  $("#editDlg").showModal();
+  $("#fName").focus();
+}
+
+function nextOrder(section) {
+  const list = items.filter(i => i.section === section).map(i => Number(i.order) || 0);
+  return (list.length ? Math.max(...list) : 0) + 10;
+}
+
+function toggleSiteFields() {
+  const isSite = $("#fSection").value === "site";
+  document.querySelectorAll(".site-only").forEach(el => el.classList.toggle("hidden", !isSite));
+}
+$("#fSection").addEventListener("change", toggleSiteFields);
+
+$("#editForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = $("#fName").value.trim();
+  let url = $("#fUrl").value.trim();
+  if (!name) return ($("#editErr").textContent = "이름을 입력해 주세요.");
+  if (url && !/^https?:\/\//i.test(url)) url = "https://" + url;
+  if (!url) url = "#";
+  if (url !== "#" && !/^https?:\/\/[^\s.]+\.[^\s]+$/i.test(url)) return ($("#editErr").textContent = "주소 형식을 확인해 주세요.");
+
+  const item = {
+    id: current?.id,
+    section: $("#fSection").value,
+    name, url,
+    icon: $("#fIcon").value.trim(),
+    color: (document.querySelector("#fColors input:checked") || {}).value,
+    access: $("#fAccess").value,
+    status: url === "#" ? "soon" : $("#fStatus").value,
+    tags: $("#fTags").value.trim(),
+    order: Number($("#fOrder").value) || 0,
+  };
+  await save({ action: current ? "update" : "add", item }, "저장했어요.");
+});
+
+$("#deleteBtn").addEventListener("click", async () => {
+  if (!current) return;
+  if (!confirm(`'${current.name}' 링크를 삭제할까요?`)) return;
+  await save({ action: "delete", id: current.id }, "삭제했어요.");
+});
+
+async function save(payload, okMsg) {
+  const btns = document.querySelectorAll("#editDlg .btn");
+  btns.forEach(b => b.disabled = true); $("#editErr").textContent = "";
+  try {
+    const r = await api({ ...payload, key: editKey });
+    if (!r.ok) {
+      if (r.error === "unauthorized") {
+        editKey = ""; store.del("plab-links-key", sessionStorage);
+        $("#editDlg").close(); setEditing(false);
+        return toast("비밀번호가 바뀌었어요. 다시 편집을 눌러 주세요.");
+      }
+      const msg = { invalid_url: "주소 형식을 확인해 주세요.", name_required: "이름을 입력해 주세요.", not_found: "이미 삭제된 링크예요. 새로고침해 주세요." }[r.error];
+      $("#editErr").textContent = msg || "저장하지 못했어요. 다시 시도해 주세요.";
+      return;
+    }
+    items = r.items; store.set("plab-links-cache", JSON.stringify(items));
+    $("#editDlg").close(); render(); toast(okMsg);
+  } catch {
+    $("#editErr").textContent = "서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.";
+  } finally { btns.forEach(b => b.disabled = false); }
+}
+
+document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+
+/* ---------- 기타 ---------- */
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+$("#q").addEventListener("input", filter);
 document.addEventListener("keydown", (e) => {
-  if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); }
+  if (e.key === "/" && !document.querySelector("dialog[open]") && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); }
 });
 
 function tick() {
@@ -209,6 +572,8 @@ function tick() {
   $("#date").textContent = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
 }
 tick(); setInterval(tick, 15000);
+
+load();
 </script>
 </body>
 </html>
